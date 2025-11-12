@@ -1,0 +1,5 @@
+# Extra packages to install
+extra_pkgs: ""
+
+# Extra packages to install from backports
+extra_pkgs_bpo: ""

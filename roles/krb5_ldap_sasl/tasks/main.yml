@@ -1,0 +1,10 @@
+## Install and configure saslauthd.
+---
+- name: Check if saslauthd is already set up
+  ansible.builtin.stat:
+    path: /usr/sbin/saslauthd
+  register: saslauthd
+
+- name: Install and configure saslauthd
+  ansible.builtin.include_tasks: setup.yml
+  when: not saslauthd.stat.exists

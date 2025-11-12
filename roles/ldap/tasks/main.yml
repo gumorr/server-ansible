@@ -1,0 +1,73 @@
+## Install and configure slapd.
+---
+- name: Check if domain name is available
+  ansible.builtin.fail:
+    msg: "The machine's domain must not be empty."
+  when: ansible_domain | length == 0
+
+- name: Check if slapd is already set up
+  ansible.builtin.stat:
+    path: /usr/sbin/slapd
+  register: slapd
+
+- name: Install and configure slapd
+  ansible.builtin.include_tasks: setup.yml
+  when: not slapd.stat.exists
+
+## Use the admin password saved to file
+- name: Slurp admin password
+  ansible.builtin.slurp:
+    src: "{{ ldap_admin_pwd_file }}"
+  register: ldap_admin_pwd
+  no_log: true
+
+## Prepare OUs
+- name: Make sure we have a user OU
+  community.general.ldap_entry:
+    dn: "ou=users,{{ basedn }}"
+    objectClass: organizationalUnit
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Make sure we have a group OU
+  community.general.ldap_entry:
+    dn: "ou=groups,{{ basedn }}"
+    objectClass: organizationalUnit
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Add group for system users
+  community.general.ldap_entry:
+    dn: "cn=sysuser,ou=groups,{{ basedn }}"
+    objectClass:
+      - posixGroup
+    attributes:
+      gidNumber: "{{ sysuser_gid }}"
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Add group for system admins
+  community.general.ldap_entry:
+    dn: "cn=sysadmin,ou=groups,{{ basedn }}"
+    objectClass:
+      - posixGroup
+    attributes:
+      gidNumber: "{{ sysadmin_gid }}"
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Provide script to manage LDAP/KDC
+  ansible.builtin.template:
+    src: debian-lan.j2
+    dest: /usr/local/sbin/debian-lan
+    mode: "0744"
+
+- name: Open LDAP ports in UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop:
+    - { port: '389', proto: 'tcp', comment: 'Allow incoming LDAP' }
+    - { port: '389', proto: 'udp', comment: 'Allow incoming LDAP' }

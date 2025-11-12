@@ -1,0 +1,27 @@
+## Install and configure krb5-kdc-ldap.
+---
+- name: Check that the domain name is available
+  ansible.builtin.fail: msg="The machine's domain must not be empty."
+  when: ansible_domain | length == 0
+
+- name: Check if Kerberos is already installed
+  ansible.builtin.stat: path=/usr/sbin/krb5kdc
+  register: krb5kdc
+
+- name: Install and configure Kerberos
+  ansible.builtin.include_tasks: setup.yml
+  when: not krb5kdc.stat.exists
+
+- name: Open Kerberos ports in UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop:
+    - { port: '88', proto: 'tcp', comment: 'Allow incoming Kerberos' }
+    - { port: '88', proto: 'udp', comment: 'Allow incoming Kerberos' }
+    - { port: '749', proto: 'tcp', comment: 'Allow incoming kadmin' }
+    - { port: '749', proto: 'udp', comment: 'Allow incoming kadmin' }
+    - { port: '464', proto: 'tcp', comment: 'Allow incoming kpasswd' }
+    - { port: '464', proto: 'udp', comment: 'Allow incoming kpasswd' }

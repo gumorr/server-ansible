@@ -1,0 +1,14 @@
+# Enable and configure automatic upgrades
+
+- name: "Install unattended-upgrades"
+  ansible.builtin.apt:
+    name: "unattended-upgrades"
+    state: latest # noqa package-latest
+
+- name: "Configure unattended-upgrades"
+  ansible.builtin.template:
+    src: "unattended-upgrades.j2"
+    dest: "/etc/apt/apt.conf.d/52-ansible-unattended-upgrades"
+    owner: "root"
+    group: "root"
+    mode: "0644"

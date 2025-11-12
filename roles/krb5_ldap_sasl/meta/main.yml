@@ -1,0 +1,3 @@
+---
+dependencies: # noqa meta-no-info
+  - role: krb5_ldap

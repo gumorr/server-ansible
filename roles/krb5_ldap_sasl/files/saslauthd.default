@@ -1,0 +1,21 @@
+# Ansible generated
+
+# Description of this saslauthd instance. Recommended.
+# (suggestion: SASL Authentication Daemon)
+DESC="SASL Authentication Daemon"
+
+# Short name of this saslauthd instance. Strongly recommended.
+# (suggestion: saslauthd)
+NAME="saslauthd"
+
+# Which authentication mechanisms should saslauthd use? (default: pam)
+MECHANISMS="kerberos5"
+
+# Additional options for this mechanism. (default: none)
+MECH_OPTIONS=""
+
+# How many saslauthd processes should we run? (default: 5)
+THREADS=5
+
+# Other options (default: -c -m /var/run/saslauthd)
+OPTIONS="-c -m /var/run/saslauthd"

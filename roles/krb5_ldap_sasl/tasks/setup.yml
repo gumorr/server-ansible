@@ -1,0 +1,19 @@
+- name: Configure saslauthd
+  ansible.builtin.copy:
+    src: saslauthd.default
+    dest: /etc/default/saslauthd
+    mode: "0644"
+  notify: "restart saslauthd"
+
+- name: Configure LDAP pwcheck_method
+  ansible.builtin.copy:
+    src: sasl2.slapd.conf
+    dest: /etc/ldap/sasl2/slapd.conf
+    mode: "0644"
+  notify: "restart slapd"
+
+- name: Install saslauthd
+  ansible.builtin.apt:
+    name:
+      - sasl2-bin
+    state: latest # noqa package-latest

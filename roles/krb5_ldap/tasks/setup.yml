@@ -1,0 +1,187 @@
+## Install and configure Kerberos.
+---
+- name: Configure Kerberos
+  ansible.builtin.template:
+    src: krb5.conf.j2
+    dest: /etc/krb5.conf
+    mode: "0644"
+
+- name: Make sure KDC config directory exists
+  ansible.builtin.file:
+    path: /etc/krb5kdc
+    state: directory
+    mode: "0755"
+
+- name: Configure KDC
+  ansible.builtin.template:
+    src: kdc.conf.j2
+    dest: /etc/krb5kdc/kdc.conf
+    mode: "0644"
+
+- name: Configure kadmin ACL
+  ansible.builtin.template:
+    src: kadm5.acl.j2
+    dest: /etc/krb5kdc/kadm5.acl
+    mode: "0644"
+  notify: "restart krb5-admin-server"
+
+- name: Install Kerberos
+  ansible.builtin.apt:
+    name:
+      - krb5-kdc-ldap
+      - krb5-admin-server
+    state: latest # noqa package-latest
+
+- name: Prepare kerberos.openldap.ldif
+  ansible.builtin.shell: gunzip -c /usr/share/doc/krb5-kdc-ldap/kerberos.openldap.ldif.gz > /etc/ldap/schema/kerberos.openldap.ldif
+  args:
+    creates: /etc/ldap/schema/kerberos.openldap.ldif
+
+- name: Activate kerberos.openldap.ldif schema # noqa no-changed-when
+  ansible.builtin.command: ldapadd  -Y EXTERNAL -H ldapi:/// -f /etc/ldap/schema/kerberos.openldap.ldif
+
+- name: Make sure we have a kerberos container
+  community.general.ldap_entry:
+    dn: "cn=kerberos,{{ basedn }}"
+    objectClass: krbContainer
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Make sure we have a kdc object
+  community.general.ldap_entry:
+    dn: "cn=kdc,cn=kerberos,{{ basedn }}"
+    objectClass:
+      - organizationalRole
+      - simpleSecurityObject
+    attributes:
+      userPassword: "{{ kdc_service_pwd }}"
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Make sure we have a kadmin object
+  community.general.ldap_entry:
+    dn: "cn=kadmin,cn=kerberos,{{ basedn }}"
+    objectClass:
+      - organizationalRole
+      - simpleSecurityObject
+    attributes:
+      userPassword: "{{ kadmin_service_pwd }}"
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Modify ACLs to account for KDC
+  community.general.ldap_attrs:
+    dn: "olcDatabase={1}mdb,cn=config"
+    attributes:
+      olcAccess:
+        - >-
+          to attrs=userPassword
+          by self write
+          by anonymous auth
+          by * none
+        - >-
+          to attrs=shadowLastChange
+          by self write
+          by * read
+        - >-
+          to dn.subtree="cn=kerberos,{{ basedn }}"
+          by dn.exact="cn=kdc,cn=kerberos,{{ basedn }}" read
+          by dn.exact="cn=kadmin,cn=kerberos,{{ basedn }}" write
+          by * none
+        - >-
+          to attrs=krbPrincipalName,krbLastPwdChange,krbPrincipalKey,krbExtraData
+          by dn.exact="cn=kdc,cn=kerberos,{{ basedn }}" read
+          by dn.exact="cn=kadmin,cn=kerberos,{{ basedn }}" write
+          by self read
+          by * auth
+        - >-
+          to *
+          by dn.exact="cn=kadmin,cn=kerberos,{{ basedn }}" write
+          by * read
+    ordered: true
+    state: exact
+
+- name: Add KDC indexes to LDAP
+  community.general.ldap_attrs:
+    dn: "olcDatabase={1}mdb,cn=config"
+    attributes:
+      olcDbIndex:
+        - objectClass eq
+        - cn,uid eq
+        - uidNumber,gidNumber eq
+        - member,memberUid eq
+        - krbPrincipalName pres,sub,eq
+    state: exact
+
+- name: Add AuthzRegexp to map access via Kerberos/GSSAPI
+  community.general.ldap_attrs:
+    dn: "cn=config"
+    attributes:
+      olcAuthzRegexp:
+        - "{0}uid=([^,]*),cn=gssapi,cn=auth     uid=$1,ou=people,{{ basedn }}"
+        - "{1}uid=([^,]*),cn=gs2-iakerb,cn=auth uid=$1,ou=people,{{ basedn }}"
+    state: exact
+
+- name: Prepare password for kdc object # noqa risky-shell-pipe no-changed-when
+  ansible.builtin.shell:
+    >-
+      echo "cn=kdc,cn=kerberos,{{ basedn }}#{HEX}$(echo -n {{ kdc_service_pwd }} |
+      xxd -g0 -ps -c 256 | sed 's/0a$//')" > /etc/krb5kdc/service.keyfile ;
+      chmod 0600 /etc/krb5kdc/service.keyfile
+  no_log: true
+
+- name: Prepare password for kadmin object # noqa risky-shell-pipe no-changed-when
+  ansible.builtin.shell:
+    >-
+      echo "cn=kadmin,cn=kerberos,{{ basedn }}#{HEX}$(echo -n {{ kadmin_service_pwd }} |
+      xxd -g0 -ps -c 256 | sed 's/0a$//')" >> /etc/krb5kdc/service.keyfile ;
+      chmod 0600 /etc/krb5kdc/service.keyfile
+  no_log: true
+
+- name: Dump KDC master password # noqa no-changed-when
+  ansible.builtin.shell:
+    >-
+      echo -n "{{ kdc_master_pwd }}" > "{{ kdc_master_pwd_file }}" ;
+      chmod 0600 "{{ kdc_master_pwd_file }}"
+  no_log: true
+
+- name: Initialize KDC # noqa no-changed-when
+  ansible.builtin.command:
+    >-
+      kdb5_ldap_util
+      -D cn=admin,"{{ basedn }}"
+      -w "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+      -H ldapi:///
+      create -s -subtrees "{{ basedn }}"
+      -P "{{ kdc_master_pwd }}"
+      -r "{{ ansible_domain | upper }}"
+  no_log: true
+  notify: "restart krb5-kdc"
+
+- name: Add root/admin as kadmin # noqa no-changed-when
+  ansible.builtin.command: kadmin.local -q 'addprinc -pw "{{ kadmin_pwd }}" root/admin'
+
+- name: Dump kadmin password # noqa no-changed-when
+  ansible.builtin.shell: echo -n "{{ kadmin_pwd }}" > "{{ kadmin_pwd_file }}" ; chmod 0600 "{{ kadmin_pwd_file }}"
+  no_log: true
+
+- name: Add default policy to silence warning when using kadmin # noqa no-changed-when
+  ansible.builtin.command: kadmin.local -q "add_policy default"
+
+- name: Create machine principals # noqa no-changed-when
+  ansible.builtin.command: kadmin.local -q 'addprinc -randkey {{ item }}/{{ ansible_hostname }}.{{ ansible_domain }}'
+  with_items:
+    - host
+    - ldap
+
+- name: Add principals to the default keytab # noqa no-changed-when
+  ansible.builtin.command: kadmin.local -q 'ktadd {{ item }}/{{ ansible_hostname }}.{{ ansible_domain }}'
+  with_items:
+    - host
+    - ldap
+
+- name: "Make 'kerberos' an alias hostname"
+  ansible.builtin.replace:
+    path: /etc/hosts
+    regexp: "^({{ ipaddr_lan | ipaddr('address') }}\\s.+)$"
+    replace: '\1 kerberos'
