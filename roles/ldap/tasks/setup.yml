@@ -34,8 +34,23 @@
     name:
       - slapd
       - ldap-utils
+      - gosa-schema
       - ufw
     state: latest # noqa package-latest
+
+- name: Convert rfc2307bis schema to ldif
+  ansible.builtin.shell: schema2ldif rfc2307bis.schema > rfc2307bis.ldif
+  args:
+    creates: '/etc/ldap/schema/gosa/rfc2307bis.ldif'
+    chdir: '/etc/ldap/schema/gosa'
+
+- name: Disable old NIS schema
+  ansible.builtin.command:
+    cmd: ldapdelete -Y EXTERNAL -H ldapi:/// cn={2}nis,cn=schema,cn=config # noqa no-changed-when
+
+- name: Enable rfc2307bis schema
+  ansible.builtin.command:
+    cmd: ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/ldap/schema/gosa/rfc2307bis.ldif # noqa no-changed-when
 
 - name: Make initial slapd configuration available
   ansible.builtin.copy:
