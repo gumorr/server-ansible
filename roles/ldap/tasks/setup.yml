@@ -35,7 +35,6 @@
       - slapd
       - ldap-utils
       - gosa-schema
-      - ufw
     state: latest # noqa package-latest
 
 - name: Convert rfc2307bis schema to ldif

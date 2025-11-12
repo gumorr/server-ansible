@@ -1,0 +1,18 @@
+## Install UFW
+---
+
+- name: Install packages for UFW
+  ansible.builtin.apt:
+    name:
+      - ufw
+    state: latest # noqa package-latest
+
+- name: Rate limit SSH ports in UFW
+  community.general.ufw:
+    rule: limit
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop:
+    - { port: 'ssh', proto: 'tcp', comment: 'Rate limit incoming SSH' }
+    - { port: 'ssh', proto: 'udp', comment: 'Rate limit incoming SSH' }

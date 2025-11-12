@@ -1,6 +1,5 @@
+## Deploys a LDAP/Kerberos server
 ---
-## Deploys a LDAP/Kerberos server with SASL passthrough
-## Add 'hostname=XXX' and 'domain=YYY' to installer boot parameters to set hostname/domain
 
 - name: Apply configuration to the domain controller
   hosts: all
@@ -8,15 +7,11 @@
   become: true
 
   vars:
-    di_dist: "{{ ansible_distribution_release }}"
-    di_version: "{{ ansible_distribution_major_version }}"
-    di_pkg: "debian-installer-{{ di_version }}-netboot-amd64"
-
-    ansible_user: ansible
-    repo_dir: "/home/{{ ansible_user }}/debian-lan"
+    sssd_admin_only: true
 
   roles:
     - upgrade_system
     - unattended_upgrades
+    - firewall
     - krb5_ldap_sasl
     - kerberize
