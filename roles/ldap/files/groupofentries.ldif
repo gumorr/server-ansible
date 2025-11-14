@@ -1,0 +1,17 @@
+#
+# groupOfEntries schema
+# from https://datatracker.ietf.org/doc/html/draft-findlay-ldap-groupofentries-00
+#
+dn: cn=groupofentries,cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: groupofentries
+#
+olcObjectClasses: (
+  1.2.826.0.1.3458854.2.1.1.1
+  NAME 'groupOfEntries'
+  DESC 'a group of entries (DNs), replacement for groupOfNames'
+  SUP top STRUCTURAL
+  MUST ( cn )
+  MAY ( member $ businessCategory $ seeAlso $ owner $ ou $ o $
+  description ) )
+#

@@ -40,9 +40,11 @@
   community.general.ldap_entry:
     dn: "cn=sysuser,ou=groups,{{ basedn }}"
     objectClass:
+      - groupOfEntries
       - posixGroup
     attributes:
       gidNumber: "{{ sysuser_gid }}"
+      member: ""
     bind_dn: "cn=admin,{{ basedn }}"
     bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
 
@@ -50,9 +52,11 @@
   community.general.ldap_entry:
     dn: "cn=sysadmin,ou=groups,{{ basedn }}"
     objectClass:
+      - groupOfEntries
       - posixGroup
     attributes:
       gidNumber: "{{ sysadmin_gid }}"
+      member: ""
     bind_dn: "cn=admin,{{ basedn }}"
     bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
 

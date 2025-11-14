@@ -14,4 +14,4 @@
     - unattended_upgrades
     - firewall
     - krb5_ldap_sasl
-    - kerberize
+#    - kerberize

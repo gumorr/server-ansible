@@ -29,12 +29,12 @@
     creates: "{{ ldap_admin_pwd_file }}"
   no_log: true
 
-- name: Install packages for LDAP
+# rfc2307 stuff stolen from debops
+
+- name: Install packages for rfc2307bis schema
   ansible.builtin.apt:
-    name:
-      - slapd
-      - ldap-utils
-      - gosa-schema
+    name: gosa-schema
+    install_recommends: false
     state: latest # noqa package-latest
 
 - name: Convert rfc2307bis schema to ldif
@@ -43,13 +43,29 @@
     creates: '/etc/ldap/schema/gosa/rfc2307bis.ldif'
     chdir: '/etc/ldap/schema/gosa'
 
-- name: Disable old NIS schema
-  ansible.builtin.command:
-    cmd: ldapdelete -Y EXTERNAL -H ldapi:/// cn={2}nis,cn=schema,cn=config # noqa no-changed-when
+- name: Divert the original NIS schema included in Debian
+  community.general.dpkg_divert:
+    path: '/etc/ldap/schema/{{ item }}'
+  loop:
+    - 'nis.schema'
+    - 'nis.ldif'
 
-- name: Enable rfc2307bis schema
-  ansible.builtin.command:
-    cmd: ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/ldap/schema/gosa/rfc2307bis.ldif # noqa no-changed-when
+- name: Symlink the new rfc2307bis schema in place of NIS schema
+  ansible.builtin.file:
+    state: 'link'
+    path: '/etc/ldap/schema/{{ item | replace("rfc2307bis", "nis") }}'
+    src: '/etc/ldap/schema/gosa/{{ item }}'
+    mode: '0644'
+  loop: [ 'rfc2307bis.schema', 'rfc2307bis.ldif' ]
+  when: not ansible_check_mode | bool
+
+- name: Install packages for LDAP
+  ansible.builtin.apt:
+    name:
+      - slapd
+      - ldap-utils
+      - python3-ldap
+    state: latest # noqa package-latest
 
 - name: Make initial slapd configuration available
   ansible.builtin.copy:
@@ -65,6 +81,18 @@
 - name: Initialize slapd if it has just been installed
   ansible.builtin.command:
     cmd: ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/ldap/slapd.d/slapd-config.ldif # noqa no-changed-when
+
+# group of entries schema (allows for empty groups)
+
+- name: Make groupOfEntries schema available
+  ansible.builtin.copy:
+    src: groupofentries.ldif
+    dest: /etc/ldap/schema/
+    mode: "0644"
+
+- name: Add groupOfEntries schema
+  ansible.builtin.command:
+    cmd: ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/ldap/schema/groupofentries.ldif # noqa no-changed-when
 
 - name: Add URI to ldap.conf
   ansible.builtin.lineinfile:

@@ -15,4 +15,3 @@
     comment: "{{ item.comment }}"
   loop:
     - { port: 'ssh', proto: 'tcp', comment: 'Rate limit incoming SSH' }
-    - { port: 'ssh', proto: 'udp', comment: 'Rate limit incoming SSH' }
