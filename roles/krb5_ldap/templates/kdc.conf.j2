@@ -1,0 +1,26 @@
+[kdcdefaults]
+    kdc_ports = 750,88
+
+[realms]
+    {{ ansible_domain | upper }} = {
+        database_module = openldap_ldapconf
+    }
+
+[dbmodules]
+    {{ ansible_domain | upper }} = {
+        db_library = kldap
+
+        ldap_kerberos_container_dn = cn=kerberos,{{ basedn }}
+
+        disable_last_success = true
+        disable_lockout = true
+
+        ldap_conns_per_server = 5
+        ldap_servers = ldapi:///
+
+        ldap_kdc_dn = cn=kdc,cn=kerberos,{{ basedn }}
+
+        ldap_kadmind_dn = cn=kadmin,cn=kerberos,{{ basedn }}
+
+        ldap_service_password_file = /etc/krb5kdc/service.keyfile
+    }
