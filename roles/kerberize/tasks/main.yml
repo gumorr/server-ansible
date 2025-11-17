@@ -1,0 +1,89 @@
+## Setup remote users + Kerberos integration
+---
+- name: Check if domain name is available
+  ansible.builtin.fail: msg="The machine's domain must not be empty."
+  when: ansible_domain | length == 0
+
+- name: Configure Kerberos
+  ansible.builtin.template:
+    src: krb5.conf.j2
+    dest: /etc/krb5.conf
+    mode: "0644"
+
+- name: Install needed packages
+  ansible.builtin.apt:
+    name:
+      - krb5-user
+      - sssd-krb5
+      - sssd-ldap
+    state: latest # noqa package-latest
+
+## Remote users (SSSD)
+
+- name: Configure SSSD
+  ansible.builtin.template:
+    src: sssd.conf.j2
+    dest: /etc/sssd/sssd.conf
+    mode: "0600"
+  notify: restart sssd
+
+- name: Configure pam_group
+  ansible.builtin.copy:
+    src: group.conf.j2
+    dest: /etc/security/group.conf
+    mode: "0644"
+
+# - name: Enable pam_group
+#   ansible.builtin.lineinfile:
+#     dest: /etc/pam.d/common-auth
+#     line: "GSSAPIAuthentication yes"
+#     insertafter: "#GSSAPIAuthentication no"
+
+## Setup machine keytab
+
+- name: Create machine principals
+  ansible.builtin.command: kadmin -p root/admin -w {{ kadmin_pwd }} -q "addprinc -randkey {{ item }}/{{ ansible_hostname }}.{{ ansible_domain }}"
+  register: kerberize_result
+  with_items:
+    - host
+  changed_when: kerberize_result.stderr is not search('already exists while creating')
+  no_log: true
+  when: kadmin_pwd | length > 0
+
+- name: Remove old keytab
+  ansible.builtin.file:
+    path: /etc/krb5.keytab
+    state: absent
+  when: kadmin_pwd | length > 0
+
+- name: Add principals to keytab
+  ansible.builtin.command: kadmin -p root/admin -w {{ kadmin_pwd }} -q "ktadd {{ item }}/{{ ansible_hostname }}.{{ ansible_domain }}"
+  with_items:
+    - host
+  args:
+  no_log: true
+  notify: "restart rpc-gssd"
+  when: kadmin_pwd | length > 0
+
+## Kerberize SSH
+
+- name: Kerberize SSH server
+  ansible.builtin.lineinfile:
+    dest: /etc/ssh/sshd_config
+    line: "GSSAPIAuthentication yes"
+    insertafter: "#GSSAPIAuthentication no"
+  notify: "reload sshd"
+
+- name: Kerberize SSH client (authentication)
+  ansible.builtin.lineinfile:
+    dest: /etc/ssh/ssh_config
+    line: "GSSAPIAuthentication yes"
+    insertafter: "#   GSSAPIAuthentication no"
+
+- name: Kerberize SSH client (credential delegation)
+  ansible.builtin.lineinfile:
+    dest: /etc/ssh/ssh_config
+    line: "GSSAPIDelegateCredentials yes"
+    insertafter: "#   GSSAPIDelegateCredentials no"
+
+

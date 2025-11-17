@@ -75,3 +75,4 @@
   loop:
     - { port: '389', proto: 'tcp', comment: 'Allow incoming LDAP' }
     - { port: '389', proto: 'udp', comment: 'Allow incoming LDAP' }
+  notify: "reload ufw"

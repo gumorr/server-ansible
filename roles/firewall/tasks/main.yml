@@ -1,6 +1,5 @@
 ## Install UFW
 ---
-
 - name: Install packages for UFW
   ansible.builtin.apt:
     name:
@@ -15,3 +14,8 @@
     comment: "{{ item.comment }}"
   loop:
     - { port: 'ssh', proto: 'tcp', comment: 'Rate limit incoming SSH' }
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+

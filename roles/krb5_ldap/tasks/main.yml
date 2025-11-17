@@ -25,3 +25,4 @@
     - { port: '749', proto: 'udp', comment: 'Allow incoming kadmin' }
     - { port: '464', proto: 'tcp', comment: 'Allow incoming kpasswd' }
     - { port: '464', proto: 'udp', comment: 'Allow incoming kpasswd' }
+  notify: "reload ufw"

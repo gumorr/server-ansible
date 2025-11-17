@@ -1,6 +1,5 @@
 ## Deploys a LDAP/Kerberos server
 ---
-
 - name: Apply configuration to the domain controller
   hosts: all
   remote_user: ansible
@@ -14,4 +13,4 @@
     - unattended_upgrades
     - firewall
     - krb5_ldap_sasl
-#    - kerberize
+    - kerberize

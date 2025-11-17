@@ -1,5 +1,5 @@
 # Update lists and upgrade packages
-
+---
 - name: Update apt package lists
   ansible.builtin.apt:
     update_cache: true

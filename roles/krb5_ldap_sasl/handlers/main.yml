@@ -1,3 +1,3 @@
-- name: restart saslauthd
+- name: Restart saslauthd
   ansible.builtin.systemd: name=saslauthd state=restarted enabled=true
   listen: "restart saslauthd"
