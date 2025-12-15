@@ -73,11 +73,6 @@
     dest: /etc/ldap/slapd.d/
     mode: "0644"
 
-# - name: Start slapd if run in installer
-#   ansible.builtin.command:
-#     cmd: /usr/sbin/slapd -h "ldapi:///" -u openldap -g openldap -F /etc/ldap/slapd.d/
-#   when: run_in_installer|default(false)|bool # noqa no-changed-when
-
 - name: Initialize slapd if it has just been installed
   ansible.builtin.command:
     cmd: ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/ldap/slapd.d/slapd-config.ldif # noqa no-changed-when

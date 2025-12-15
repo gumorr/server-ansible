@@ -8,3 +8,21 @@
         default_domain = {{ ansible_domain }}
     }
 
+[dbdefaults]
+    ldap_kerberos_container_dn = cn=kerberos,{{ basedn }}
+
+[dbmodules]
+    {{ ansible_domain | upper }} = {
+        db_library = kldap
+
+        ldap_kdc_dn = cn=kdc,cn=kerberos,{{ basedn }}
+        ldap_kadmind_dn = cn=kadmin,cn=kerberos,{{ basedn }}
+
+        ldap_service_password_file = /etc/krb5kdc/service.keyfile
+
+        ldap_servers = ldapi:///
+        ldap_conns_per_server = 5
+
+        disable_last_success = true
+        disable_lockout = true
+    }

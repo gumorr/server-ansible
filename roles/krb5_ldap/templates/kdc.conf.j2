@@ -3,24 +3,17 @@
 
 [realms]
     {{ ansible_domain | upper }} = {
-        database_module = openldap_ldapconf
-    }
+        admin_keytab = FILE:/etc/krb5kdc/kadm5.keytab
+        acl_file = /etc/krb5kdc/kadm5.acl
+        key_stash_file = /etc/krb5kdc/stash
 
-[dbmodules]
-    {{ ansible_domain | upper }} = {
-        db_library = kldap
+        kdc_ports = 750,88
 
-        ldap_kerberos_container_dn = cn=kerberos,{{ basedn }}
+        max_life = 12h 0m 0s
+        max_renewable_life = 7d 0h 0m 0s
 
-        disable_last_success = true
-        disable_lockout = true
+        master_key_type = des3-hmac-sha1
+        #supported_enctypes = aes256-cts:normal aes128-cts:normal
 
-        ldap_conns_per_server = 5
-        ldap_servers = ldapi:///
-
-        ldap_kdc_dn = cn=kdc,cn=kerberos,{{ basedn }}
-
-        ldap_kadmind_dn = cn=kadmin,cn=kerberos,{{ basedn }}
-
-        ldap_service_password_file = /etc/krb5kdc/service.keyfile
+        default_principal_flags = +preauth
     }

@@ -1,0 +1,9 @@
+[libdefaults]
+    default_realm = {{ ansible_domain | upper }}
+
+[realms]
+    {{ ansible_domain | upper }} = {
+        kdc = {{ krb_server }}
+        admin_server = {{ krb_server }}
+        default_domain = {{ ansible_domain }}
+    }

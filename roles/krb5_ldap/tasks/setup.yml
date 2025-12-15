@@ -5,6 +5,7 @@
     src: krb5.conf.j2
     dest: /etc/krb5.conf
     mode: "0644"
+  register: krb5_conf
 
 - name: Make sure KDC config directory exists
   ansible.builtin.file:
@@ -28,6 +29,7 @@
 - name: Install Kerberos
   ansible.builtin.apt:
     name:
+      - xxd # need this shit for making service.keytab
       - krb5-kdc-ldap
       - krb5-admin-server
     state: latest # noqa package-latest
@@ -180,8 +182,9 @@
     - host
     - ldap
 
-- name: "Make 'kerberos' an alias hostname"
+- name: Make 'kerberos' an alias hostname
   ansible.builtin.replace:
     path: /etc/hosts
-    regexp: "^({{ ipaddr_lan | ipaddr('address') }}\\s.+)$"
+    regexp: "^({{ ipaddr_lan | ansible.utils.ipaddr('address') }}\\s.+)$"
     replace: '\1 kerberos'
+  when: ipaddr_lan is defined

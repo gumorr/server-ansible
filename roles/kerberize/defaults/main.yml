@@ -1,6 +1,6 @@
 basedn: "{{ 'dc=' + ( ansible_domain | replace('^.','') | replace('.$','') | replace('.',',dc=')) }}"
-ldap_server: ldap
-krb_server: kerberos
+ldap_server: "ldap.{{ ansible_domain }}"
+krb_server: "kerberos.{{ ansible_domain }}"
 sssd_min_id: 5000
 sssd_min_id: 20000
 sssd_admin_only: false

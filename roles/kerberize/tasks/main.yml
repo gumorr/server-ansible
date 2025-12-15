@@ -9,6 +9,7 @@
     src: krb5.conf.j2
     dest: /etc/krb5.conf
     mode: "0644"
+  when: not krb5_conf.stat.exists
 
 - name: Install needed packages
   ansible.builtin.apt:
@@ -27,17 +28,21 @@
     mode: "0600"
   notify: restart sssd
 
+- name: Enable SSS and mkhomedir PAM modules
+  ansible.builtin.command:
+    cmd: pam-auth-update --force --enable mkhomedir sss # noqa no-changed-when
+
 - name: Configure pam_group
   ansible.builtin.copy:
-    src: group.conf.j2
+    src: group.conf
     dest: /etc/security/group.conf
     mode: "0644"
 
-# - name: Enable pam_group
-#   ansible.builtin.lineinfile:
-#     dest: /etc/pam.d/common-auth
-#     line: "GSSAPIAuthentication yes"
-#     insertafter: "#GSSAPIAuthentication no"
+- name: Enable pam_group
+  ansible.builtin.lineinfile:
+    dest: /etc/pam.d/common-auth
+    line: "auth    optional    pam_group.so"
+    insertafter: "# end of pam-auth-update config"
 
 ## Setup machine keytab
 
