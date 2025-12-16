@@ -33,8 +33,8 @@
     cmd: pam-auth-update --force --enable mkhomedir sss # noqa no-changed-when
 
 - name: Configure pam_group
-  ansible.builtin.copy:
-    src: group.conf
+  ansible.builtin.template:
+    src: group.conf.j2
     dest: /etc/security/group.conf
     mode: "0644"
 

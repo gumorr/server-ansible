@@ -67,8 +67,6 @@ MAXID={{ max_id }}
 ## Range to cover in a single ldap search (must be smaller than 'olcSizeLimit' in cn=config):
 RANGE=399
 
-HOMES="{{ lan_homes }}"
-
 COMMAND="$1"
 id="$2"
 pw="${3:-""}"
@@ -81,6 +79,9 @@ domain="$(hostname -d)"
 if [ -x /usr/sbin/kadmin.local ] ; then
     KRB5=true
     pwEntry=""
+    if [ -x /usr/sbin/saslauthd ] ; then
+        pwEntry="userPassword: {SASL}${id}@{{ ansible_domain | upper }}"
+    fi
 else
     KRB5=false
     pwEntry="userPassword: $pw"
@@ -98,7 +99,7 @@ nextnum(){
         bend=$(( bsta + RANGE ))
 
         all="$(seq "$bsta" "$bend")"
-        uids="$(ldapsearch -Y EXTERNAL -H ldapi:/// -LLL -b "ou=people,$BASEDN" "(&(objectClass=posixAccount)(uidNumber>=$bsta)(uidNumber<=$bend))" \
+        uids="$(ldapsearch -Y EXTERNAL -H ldapi:/// -LLL -b "ou=users,$BASEDN" "(&(objectClass=posixAccount)(uidNumber>=$bsta)(uidNumber<=$bend))" \
                          uidNumber 2>/dev/null | grep "uidNumber: " | cut -f2 -d ' ' | sort -g | uniq)"
         gids="$(ldapsearch -Y EXTERNAL -H ldapi:/// -LLL -b "ou=groups,$BASEDN" "(&(objectClass=posixGroup)(gidNumber>=$bsta)(uidNumber<=$bend))" \
                          gidNumber 2>/dev/null | grep "gidNumber: " | cut -f2 -d ' ' | sort -g | uniq)"
@@ -128,7 +129,7 @@ add-user(){
     local uidNumber
     local gidNumber
 
-    if ldapsearch -Y EXTERNAL -H ldapi:/// -LLL -b "ou=people,$BASEDN" "(&(objectClass=posixAccount)(uid=$id))" uid 2>/dev/null \
+    if ldapsearch -Y EXTERNAL -H ldapi:/// -LLL -b "ou=users,$BASEDN" "(&(objectClass=posixAccount)(uid=$id))" uid 2>/dev/null \
             | grep -q "uid: $id" ; then
         echo "User '$id' exists already, skipping."
         return
@@ -142,49 +143,46 @@ add-user(){
         exit 1
     fi
 
+    # Add user and group entries to LDAP
     cat <<EOF | ldapadd -H ldapi:/// -D "$LDAPADMIN"  -w "$ADPASSWD" | sed '/^$/d'
 ############## LDIF ##############
-dn: uid=${id},ou=people,$BASEDN
+dn: uid=${id},ou=users,$BASEDN
 objectClass: inetOrgPerson
 objectClass: posixAccount
 uidNumber: ${uidNumber}
 gidNumber: ${gidNumber}
-homeDirectory: ${HOMES}/${id:0:1}/${id}
+homeDirectory: /home/${id}
 loginShell: /bin/bash
 cn: ${gn} ${sn}
 givenName: ${gn}
 sn: ${sn}
 gecos: ${gn} ${sn}
-mail: ${id}@{{ ansible_domain }}
 ${pwEntry}
 
 dn: cn=${id},ou=groups,$BASEDN
+objectClass: groupOfEntries
 objectClass: posixGroup
 gidNumber: ${gidNumber}
+member: uid=${id},ou=users,$BASEDN
 ##################################
 EOF
 
+    # Add user to additional groups
     if [ -n "$grp" ] && [ "$grp" != "none" ] ; then
         cat <<EOF | ldapmodify -H ldapi:/// -D "$LDAPADMIN"  -w "$ADPASSWD" | sed '/^$/d'
 ############## LDIF ##############
-dn: cn=${grp},ou=groups,$BASEDN
-add: memberUid
-memberUid: ${id}
+dn: uid=${id},ou=users,$BASEDN
+add: memberOf
+memberOf: cn=${grp},ou=groups,$BASEDN
 ##################################
 EOF
     fi
 
+    # Add user principal to Kerberos if needed
     if [ "$KRB5" = "true" ] ; then
-        kadmin.local -q "add_principal -policy default -pw \"$pw\" -x dn=\"uid=${id},ou=people,$BASEDN\" ${id}" \
+        kadmin.local -q "add_principal -policy default -pw \"$pw\" -x dn=\"uid=${id},ou=users,$BASEDN\" ${id}" \
             | sed '/Authenticating as principal/d'
-        if [ ! -e "${HOMES}/${id:0:1}/${id}" ] ; then
-            echo "uidNumber: ${uidNumber}  gidNumber: ${gidNumber}"
-            mkdir -p "${HOMES}/${id:0:1}/"
-            cp -r /etc/skel "${HOMES}/${id:0:1}/${id}"
-            chown -R "${uidNumber}:${gidNumber}" "${HOMES}/${id:0:1}/${id}"
-            #chmod -R o= ${HOMES}/${id:0:1}/${id}
-            ls -nld "${HOMES}/${id:0:1}/${id}"
-        fi
+        echo "uidNumber: ${uidNumber}  gidNumber: ${gidNumber}"
     fi
 }
 
@@ -192,39 +190,22 @@ EOF
 del-user(){
     local id="$1"
     local KEEPDIR
+    # Remove user's Kerberos principal if needed
     if [ $KRB5 ] ; then
-        ## Remove all kerberos attributes from LDAP, then the whole DN below.  The latter should be sufficient.
         kadmin.local -q "delete_principal -force ${id}"  \
             |  sed -e '/Authenticating as principal/d' -e '/Make sure that you have removed/d'
     fi
 
-    ldapdelete -v -H ldapi:/// -D "$LDAPADMIN"  -w "$ADPASSWD" "uid=${id},ou=people,$BASEDN"  "cn=${id},ou=groups,$BASEDN" 2>&1 \
+    # Remove user and user group entry in LDAP, memberOf overlay should take care of the rest
+    ldapdelete -v -H ldapi:/// -D "$LDAPADMIN"  -w "$ADPASSWD" "uid=${id},ou=users,$BASEDN"  "cn=${id},ou=groups,$BASEDN" 2>&1 \
         | sed '/ldap_initialize/d'
-
-    for grp in $(ldapsearch -Y EXTERNAL -H ldapi:/// -LLL -b "ou=groups,$BASEDN" "(&(objectClass=posixGroup)(memberUid=${id}))" cn 2>/dev/null \
-                     | grep cn: | cut -d ' ' -f2) ; do
-        cat <<EOF | ldapmodify -H ldapi:/// -D "$LDAPADMIN"  -w "$ADPASSWD" | sed '/^$/d'
-############## LDIF ##############
-dn: cn=${grp},ou=groups,$BASEDN
-delete: memberUid
-memberUid: ${id}
-##################################
-EOF
-    done
-
-    if [ -d "${HOMES}/${id:0:1}/${id}" ] ; then
-        KEEPDIR="${HOMES}/${id:0:1}/rm_$(date '+%Y%m%d')_${id}"
-        mv "${HOMES}/${id:0:1}/${id}" "${KEEPDIR}"
-        chown -R root:root  "${KEEPDIR}"
-        ls -ld "$KEEPDIR"
-    fi
 }
 
 
 del-host(){
     local id="$1"
+    # Remove host and NFS principals
     if [ $KRB5 ] ; then
-        ## Remove kerberos principals from LDAP.
         kadmin.local -q "delete_principal -force host/${id}.${domain}"  \
             |  sed -e '/Authenticating as principal/d' -e '/Make sure that you have removed/d'
         kadmin.local -q "delete_principal -force nfs/${id}.${domain}"  \

@@ -19,4 +19,10 @@ krb5_realm = {{ ansible_domain | upper }}
 cache_credentials = true
 
 min_id = {{ sssd_min_id }}
-max_id = {{ sssd_max_id }}
+{% if sssd_admin_only %}
+
+simple_allow_groups = sysadmin
+{% else %}
+
+simple_allow_groups = sysuser
+{% endif %}
