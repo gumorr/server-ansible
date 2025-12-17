@@ -1,5 +1,6 @@
 [sssd]
-domains = LDAP
+domains = {{ ansible_domain }}
+services = nss, pam
 config_file_version = 2
 
 [nss]
@@ -8,21 +9,24 @@ filter_users = root
 
 [pam]
 
-[domain/LDAP]
+[domain/{{ ansible_domain }}]
 id_provider = ldap
 ldap_uri = ldap://{{ ldap_server }}/
 ldap_search_base = {{ basedn }}
+ldap_schema = rfc2307bis
+ldap_id_use_start_tls = false
 
 auth_provider = krb5
 krb5_server = {{ krb_server }}
 krb5_realm = {{ ansible_domain | upper }}
+
 cache_credentials = true
 
 min_id = {{ sssd_min_id }}
-{% if sssd_admin_only %}
 
+access_provider = simple
+{% if sssd_admin_only %}
 simple_allow_groups = sysadmin
 {% else %}
-
 simple_allow_groups = sysuser
 {% endif %}

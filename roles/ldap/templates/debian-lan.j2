@@ -171,9 +171,9 @@ EOF
     if [ -n "$grp" ] && [ "$grp" != "none" ] ; then
         cat <<EOF | ldapmodify -H ldapi:/// -D "$LDAPADMIN"  -w "$ADPASSWD" | sed '/^$/d'
 ############## LDIF ##############
-dn: uid=${id},ou=users,$BASEDN
-add: memberOf
-memberOf: cn=${grp},ou=groups,$BASEDN
+dn: cn=${grp},ou=groups,$BASEDN
+add: member
+member: uid=${id},ou=users,$BASEDN
 ##################################
 EOF
     fi
