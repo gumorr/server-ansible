@@ -12,10 +12,10 @@
     name: rpc-gssd
     daemon_reload: true
     state: restarted
-  notify: "restart rpc-gssd"
+  listen: "restart rpc-gssd"
 
 - name: Reload sshd
   systemd:
     name: sshd
     state: reloaded
-  notify: "reload sshd"
+  listen: "reload sshd"

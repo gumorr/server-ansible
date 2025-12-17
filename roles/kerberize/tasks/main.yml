@@ -9,7 +9,7 @@
     src: krb5.conf.j2
     dest: /etc/krb5.conf
     mode: "0644"
-  when: not krb5_conf.stat.exists
+  when: krb5_conf is not defined
 
 - name: Install needed packages
   ansible.builtin.apt:
@@ -17,6 +17,7 @@
       - krb5-user
       - sssd-krb5
       - sssd-ldap
+      - nfs-common
     state: latest # noqa package-latest
 
 ## Remote users (SSSD)
@@ -47,7 +48,7 @@
 ## Setup machine keytab
 
 - name: Create machine principals
-  ansible.builtin.command: kadmin -p root/admin -w {{ kadmin_pwd }} -q "addprinc -randkey {{ item }}/{{ ansible_hostname }}.{{ ansible_domain }}"
+  ansible.builtin.command: kadmin -p root/admin -w {{ kadmin_pwd }} -q "addprinc -randkey {{ item }}/{{ ansible_hostname | lower }}.{{ ansible_domain | lower }}"
   register: kerberize_result
   with_items:
     - host
@@ -62,12 +63,13 @@
   when: kadmin_pwd | length > 0
 
 - name: Add principals to keytab
-  ansible.builtin.command: kadmin -p root/admin -w {{ kadmin_pwd }} -q "ktadd {{ item }}/{{ ansible_hostname }}.{{ ansible_domain }}"
+  ansible.builtin.command: kadmin -p root/admin -w {{ kadmin_pwd }} -q "ktadd {{ item }}/{{ ansible_hostname | lower }}.{{ ansible_domain | lower }}"
   with_items:
+    - nfs
     - host
   args:
   no_log: true
-  notify: "restart rpc-gssd"
+  notify: restart rpc-gssd
   when: kadmin_pwd | length > 0
 
 ## Kerberize SSH
@@ -77,7 +79,7 @@
     dest: /etc/ssh/sshd_config
     line: "GSSAPIAuthentication yes"
     insertafter: "#GSSAPIAuthentication no"
-  notify: "reload sshd"
+  notify: reload sshd
 
 - name: Kerberize SSH client (authentication)
   ansible.builtin.lineinfile:

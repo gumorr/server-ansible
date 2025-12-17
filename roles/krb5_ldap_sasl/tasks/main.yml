@@ -8,3 +8,6 @@
 - name: Install and configure saslauthd
   ansible.builtin.include_tasks: setup.yml
   when: not saslauthd.stat.exists
+
+- name: Flush handlers to get the daemons running
+  ansible.builtin.meta: flush_handlers
