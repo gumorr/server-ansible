@@ -1,0 +1,6 @@
+# if not using web browsers, use the following instead:
+# shm_mount_options: ['defaults', 'nodev', 'nosuid', 'noexec']
+shm_mount_options: ['defaults', 'nodev', 'nosuid']
+
+# set to true if using something like docker
+allow_ip_forwarding: false

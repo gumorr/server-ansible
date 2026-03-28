@@ -2,15 +2,17 @@
 ---
 - name: Apply configuration to the domain controller
   hosts: all
-  remote_user: ansible
+  remote_user: local-admin
   become: true
 
   vars:
     sssd_admin_only: true
+    shm_mount_options: ['defaults', 'nodev', 'nosuid', 'noexec']
 
   roles:
     - upgrade_system
     - unattended_upgrades
+    - hardening
     - firewall
     - krb5_ldap_sasl
     - kerberize

@@ -1,0 +1,13 @@
+## Deploys a Kerberized workstation machine
+---
+- name: Apply configuration to a domain controller client
+  hosts: all
+  remote_user: ansible
+  become: true
+
+  roles:
+    - unstable
+    - upgrade_system
+    - firewall
+    - kerberize
+    - desktop

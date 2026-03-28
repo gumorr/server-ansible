@@ -1,0 +1,23 @@
+## Misc. hardening tasks
+---
+- name: Harden kernel parameters
+  ansible.builtin.template:
+    src: 99-ansible.conf.j2
+    dest: /etc/sysctl.d/99-ansible.conf
+    mode: "0644"
+
+- name: Mount NFS volumes with noauto according to boot option
+  ansible.posix.mount:
+    src: tmpfs
+    path: /run/shm
+    opts: "{{ shm_mount_options | join(',') }}"
+    state: mounted
+    fstype: tmpfs
+
+- name: Mount NFS volumes with noauto according to boot option
+  ansible.posix.mount:
+    src: tmpfs
+    path: /dev/shm
+    opts: "{{ shm_mount_options | join(',') }}"
+    state: mounted
+    fstype: tmpfs
