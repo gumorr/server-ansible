@@ -1,6 +1,6 @@
 ## Deploys a LDAP/Kerberos server
 ---
-- name: Apply configuration to the domain controller
+- name: Apply configuration to a domain controller server
   hosts: all
   remote_user: local-admin
   become: true
