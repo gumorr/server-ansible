@@ -1,0 +1,15 @@
+## Harden a box
+---
+- name: Apply hardening configuration to a server box
+  hosts: all
+  remote_user: local-admin
+  become: true
+
+  vars:
+    shm_mount_options: ['defaults', 'nodev', 'nosuid', 'noexec']
+    allow_ip_forwarding: true
+
+  roles:
+    - upgrade_system
+    - unattended_upgrades
+    - hardening
