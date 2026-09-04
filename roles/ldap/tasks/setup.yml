@@ -100,10 +100,3 @@
     dest: /etc/ldap/ldap.conf
     line: "BASE {{ basedn }}"
     insertafter: "#BASE.*"
-
-- name: Make 'ldap' an alias hostname
-  ansible.builtin.replace:
-    path: /etc/hosts
-    regexp: "^({{ ipaddr_lan | ansible.utils.ipaddr('address') }}\\s.+)$"
-    replace: '\1 ldap'
-  when: ipaddr_lan is defined

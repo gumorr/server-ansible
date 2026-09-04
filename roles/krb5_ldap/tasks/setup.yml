@@ -181,10 +181,3 @@
   with_items:
     - host
     - ldap
-
-- name: Make 'kerberos' an alias hostname
-  ansible.builtin.replace:
-    path: /etc/hosts
-    regexp: "^({{ ipaddr_lan | ansible.utils.ipaddr('address') }}\\s.+)$"
-    replace: '\1 kerberos'
-  when: ipaddr_lan is defined

@@ -19,4 +19,5 @@
     - unattended_upgrades
     - hardening
     - firewall
+    - timesyncd
     - kerberize

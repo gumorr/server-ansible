@@ -14,5 +14,6 @@
     - unattended_upgrades
     - hardening
     - firewall
+    - ntp
     - krb5_ldap_sasl
     - kerberize
