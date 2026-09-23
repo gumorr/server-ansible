@@ -120,8 +120,8 @@
     dn: "cn=config"
     attributes:
       olcAuthzRegexp:
-        - "{0}uid=([^,]*),cn=gssapi,cn=auth     uid=$1,ou=people,{{ basedn }}"
-        - "{1}uid=([^,]*),cn=gs2-iakerb,cn=auth uid=$1,ou=people,{{ basedn }}"
+        - "{0}uid=([^,]*),cn=gssapi,cn=auth     uid=$1,ou=users,{{ basedn }}"
+        - "{1}uid=([^,]*),cn=gs2-iakerb,cn=auth uid=$1,ou=users,{{ basedn }}"
     state: exact
 
 - name: Prepare password for kdc object # noqa risky-shell-pipe no-changed-when

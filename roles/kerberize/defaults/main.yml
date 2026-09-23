@@ -7,3 +7,5 @@ sssd_admin_only: false
 
 sysuser_groups: [ "users" ]
 sysadmin_groups: [ "sudo", "adm" ]
+
+kerberize_nfs: false

@@ -43,5 +43,6 @@ objectClass: olcMemberOf
 olcOverlay: memberof
 olcMemberOfDangling: error
 olcMemberOfRefInt: TRUE
+olcMemberOfGroupOC: groupOfEntries
 olcMemberOfMemberAD: member
 olcMemberOfMemberOfAD: memberOf

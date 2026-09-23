@@ -65,6 +65,7 @@
       - slapd
       - ldap-utils
       - python3-ldap
+      - ldapvi
     state: latest # noqa package-latest
 
 - name: Make initial slapd configuration available

@@ -1,0 +1,19 @@
+## Kerberize a box
+---
+- name: Kerberize a server box
+  hosts: all
+  remote_user: local-admin
+  become: true
+
+  vars:
+    sssd_admin_only: true
+    override_domain: "local.nocturne.gummiwelt.net"
+
+  vars_prompt:
+    - name: "kadmin_pwd"
+      prompt: "Provide kadmin password to fetch kerberos keytab.\nLeave empty if done already"
+      private: true
+
+  roles:
+    - set_domain
+    - kerberize

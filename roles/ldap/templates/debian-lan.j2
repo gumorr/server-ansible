@@ -208,8 +208,10 @@ del-host(){
     if [ $KRB5 ] ; then
         kadmin.local -q "delete_principal -force host/${id}.${domain}"  \
             |  sed -e '/Authenticating as principal/d' -e '/Make sure that you have removed/d'
+{% if kerberize_nfs %}
         kadmin.local -q "delete_principal -force nfs/${id}.${domain}"  \
             |  sed -e '/Authenticating as principal/d' -e '/Make sure that you have removed/d'
+{% endif %}
     fi
 }
 

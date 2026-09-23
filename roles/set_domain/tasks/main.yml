@@ -1,0 +1,5 @@
+## Set the domain fact because ansible is a PIECE OF FUCKING SHIT
+---
+- name: Override ansible_domain
+  ansible.builtin.set_fact:
+    ansible_domain: '{{ override_domain }}'

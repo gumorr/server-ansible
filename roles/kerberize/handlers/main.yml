@@ -13,6 +13,7 @@
     daemon_reload: true
     state: restarted
   listen: "restart rpc-gssd"
+  when: kerberize_nfs
 
 - name: Reload sshd
   systemd:

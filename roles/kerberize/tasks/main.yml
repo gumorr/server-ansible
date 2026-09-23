@@ -17,8 +17,14 @@
       - krb5-user
       - sssd-krb5
       - sssd-ldap
+    state: latest # noqa package-latest
+
+- name: Install nfs-common
+  ansible.builtin.apt:
+    name:
       - nfs-common
     state: latest # noqa package-latest
+  when: kerberize_nfs
 
 ## Remote users (SSSD)
 
@@ -62,15 +68,24 @@
     state: absent
   when: kadmin_pwd | length > 0
 
-- name: Add principals to keytab
+- name: Add host principal to keytab
   ansible.builtin.command: kadmin -p root/admin -w {{ kadmin_pwd }} -q "ktadd {{ item }}/{{ ansible_hostname | lower }}.{{ ansible_domain | lower }}"
   with_items:
-    - nfs
     - host
   args:
   no_log: true
-  notify: restart rpc-gssd
   when: kadmin_pwd | length > 0
+
+- name: Add NFS principal to keytab
+  ansible.builtin.command: kadmin -p root/admin -w {{ kadmin_pwd }} -q "ktadd {{ item }}/{{ ansible_hostname | lower }}.{{ ansible_domain | lower }}"
+  with_items:
+    - nfs
+  args:
+  no_log: true
+  notify: restart rpc-gssd
+  when:
+    - kadmin_pwd | length > 0
+    - kerberize_nfs
 
 ## Kerberize SSH
 
