@@ -44,7 +44,6 @@
       - posixGroup
     attributes:
       gidNumber: "{{ sysuser_gid }}"
-      member: ""
     bind_dn: "cn=admin,{{ basedn }}"
     bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
 
@@ -56,7 +55,6 @@
       - posixGroup
     attributes:
       gidNumber: "{{ sysadmin_gid }}"
-      member: ""
     bind_dn: "cn=admin,{{ basedn }}"
     bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
 

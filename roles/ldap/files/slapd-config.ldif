@@ -14,21 +14,6 @@ olcUniqueURI: serialize ldap:///?uid?sub?
 olcUniqueURI: serialize ldap:///?uidNumber?sub?
 
 
-#### RefInt ####
-
-dn: cn=module,cn=config
-objectClass: olcModuleList
-cn: module
-olcModulePath: /usr/lib/ldap
-olcModuleLoad: refint
-
-dn: olcOverlay=refint,olcDatabase={1}mdb,cn=config
-objectClass: olcOverlayConfig
-objectClass: olcRefintConfig
-olcOverlay: refint
-olcRefintAttribute: member memberOf
-
-
 #### Reverse Group Membership ####
 
 dn: cn=module,cn=config
@@ -46,3 +31,18 @@ olcMemberOfRefInt: TRUE
 olcMemberOfGroupOC: groupOfEntries
 olcMemberOfMemberAD: member
 olcMemberOfMemberOfAD: memberOf
+
+
+#### RefInt ####
+
+dn: cn=module,cn=config
+objectClass: olcModuleList
+cn: module
+olcModulePath: /usr/lib/ldap
+olcModuleLoad: refint
+
+dn: olcOverlay=refint,olcDatabase={1}mdb,cn=config
+objectClass: olcOverlayConfig
+objectClass: olcRefintConfig
+olcOverlay: refint
+olcRefintAttribute: member memberOf
