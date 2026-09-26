@@ -1,0 +1,113 @@
+- name: Check that the domain name is available
+  ansible.builtin.fail: msg="The machine's domain must not be empty."
+  when: ansible_domain | length == 0
+
+- name: Check if PowerDNS is already set up
+  ansible.builtin.stat:
+    path: /usr/sbin/pdns_server
+  register: pdns
+
+- name: Install and configure PowerDNS
+  ansible.builtin.include_tasks: setup.yml
+  when: not pdns.stat.exists
+
+- name: Obtain current ULA IPv6 address
+  ansible.builtin.set_fact:
+    ipv6_ula_address: "{{ ansible_all_ipv6_addresses | select('match', '^fd') | first }}"
+
+- name: Expand ULA IPv6 address
+  ansible.builtin.set_fact:
+    ipv6_ula_address_x509: "{{ ipv6_ula_address | ansible.utils.ipv6form('x509') }}"
+
+- name: Obtain ULA prefix
+  ansible.builtin.set_fact:
+    ula_prefix: "{{ (ipv6_ula_address + '/48' | string) | ansible.utils.ipaddr('network/prefix') }}"
+
+- name: Make sure we have a host OU
+  community.general.ldap_entry:
+    dn: "ou=hosts,{{ basedn }}"
+    objectClass: organizationalUnit
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Add SOA record
+  community.general.ldap_entry:
+    dn: "dc={{ ansible_domain }},ou=hosts,{{ basedn }}"
+    objectClass:
+      - dNSDomain2
+      - domainRelatedObject
+    attributes:
+      associatedDomain: "{{ ansible_domain }}"
+      dNSTTL: 86400
+      sOARecord: "ns1.{{ ansible_domain }} hostmaster.{{ ansible_domain }} {{ now(fmt='%Y%m%d01') }} 7200 900 1209600 3600"
+      nSRecord: "ns1.{{ ansible_domain }}"
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Add IPv4 reverse zone record
+  community.general.ldap_entry:
+    dn: "dc=168.192.in-addr.arpa,ou=hosts,{{ basedn }}"
+    objectClass:
+      - dNSDomain2
+      - domainRelatedObject
+    attributes:
+      associatedDomain: 168.192.in-addr.arpa
+      dNSTTL: 86400
+      sOARecord: "ns1.{{ ansible_domain }} hostmaster.{{ ansible_domain }} {{ now(fmt='%Y%m%d01') }} 7200 900 1209600 3600"
+      nSRecord: "ns1.{{ ansible_domain }}"
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Compute reverse DNS zone name from ULA prefix
+  ansible.builtin.set_fact:
+    ula_reverse_zone: "{{ ula_prefix | ansible.utils.ipaddr('revdns') }}"
+
+- name: Add IPv6 reverse zone record
+  community.general.ldap_entry:
+    dn: "dc={{ ula_reverse_zone }},ou=hosts,{{ basedn }}"
+    objectClass:
+      - dNSDomain2
+      - domainRelatedObject
+    attributes:
+      associatedDomain: "{{ ula_reverse_zone }}"
+      dNSTTL: 86400
+      sOARecord: "ns1.{{ ansible_domain }} hostmaster.{{ ansible_domain }} {{ now(fmt='%Y%m%d01') }} 7200 900 1209600 3600"
+      nSRecord: "ns1.{{ ansible_domain }}"
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Add hostname DNS record
+  community.general.ldap_entry:
+    dn: "dc={{ ansible_hostname | lower }},ou=hosts,{{ basedn }}"
+    objectClass:
+      - dNSDomain2
+      - domainRelatedObject
+    attributes:
+      associatedDomain: "{{ ansible_hostname }}.{{ ansible_domain }}"
+      aRecord: "{{ ansible_default_ipv4.address }}"
+      aAAARecord: "{{ ipv6_ula_address_x509 }}"
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Add nameserver DNS record
+  community.general.ldap_entry:
+    dn: "dc=ns1,ou=hosts,{{ basedn }}"
+    objectClass:
+      - dNSDomain2
+      - domainRelatedObject
+    attributes:
+      associatedDomain: "ns1.{{ ansible_domain }}"
+      cnameRecord: "{{ ansible_hostname }}.{{ ansible_domain }}"
+    bind_dn: "cn=admin,{{ basedn }}"
+    bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+- name: Open DNS ports in UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop:
+    - { port: '53', proto: 'tcp', comment: 'Allow incoming DNS' }
+    - { port: '53', proto: 'udp', comment: 'Allow incoming DNS' }
+  notify: "reload ufw"

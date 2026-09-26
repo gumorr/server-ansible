@@ -16,3 +16,4 @@
     - firewall
     - krb5_ldap_sasl
     - kerberize
+    - pdns_ldap

@@ -1,0 +1,41 @@
+- name: Install packages for PowerDNS
+  ansible.builtin.apt:
+    name:
+      - pdns-server
+      - pdns-backend-ldap
+    state: latest # noqa package-latest
+
+- name: Convert pdns-domaininfo schema to ldif
+  ansible.builtin.shell: schema2ldif pdns-domaininfo.schema > pdns-domaininfo.ldif
+  args:
+    creates: '/etc/ldap/schema/pdns-domaininfo.ldif'
+    chdir: '/etc/ldap/schema'
+
+- name: Convert dnsdomain2 schema to ldif
+  ansible.builtin.shell: schema2ldif dnsdomain2.schema > dnsdomain2.ldif
+  args:
+    creates: '/etc/ldap/schema/dnsdomain2.ldif'
+    chdir: '/etc/ldap/schema'
+
+- name: Add pdns-domaininfo schema
+  ansible.builtin.command:
+    cmd: ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/ldap/schema/pdns-domaininfo.ldif # noqa no-changed-when
+
+- name: Add dnsdomain2 schema
+  ansible.builtin.command:
+    cmd: ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/ldap/schema/dnsdomain2.ldif # noqa no-changed-when
+
+- name: Add DNS indexes to LDAP
+  community.general.ldap_attrs:
+    dn: "olcDatabase={1}mdb,cn=config"
+    attributes:
+      olcDbIndex:
+        - associatedDomain pres,eq,sub
+        - aAAARecord pres,eq
+        - aRecord pres,eq
+
+- name: Configure PowerDNS
+  ansible.builtin.template:
+    src: pdns.conf.j2
+    dest: /etc/powerdns/pdns.conf
+    mode: "0644"

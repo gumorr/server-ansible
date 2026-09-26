@@ -33,7 +33,9 @@
 
 - name: Install packages for rfc2307bis schema
   ansible.builtin.apt:
-    name: gosa-schema
+    name:
+      - gosa-schema
+      - schema2ldif
     install_recommends: false
     state: latest # noqa package-latest
 
