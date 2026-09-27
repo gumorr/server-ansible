@@ -1,0 +1,16 @@
+- name: Restart slapd
+  ansible.builtin.systemd: name=slapd state=restarted enabled=yes
+  listen: "restart slapd"
+
+- name: Restart PowerDNS
+  ansible.builtin.systemd: name=pdns state=restarted enabled=true
+  listen: "restart pdns"
+
+- name: Restart PowerDNS Recursor
+  ansible.builtin.systemd: name=pdns state=restarted enabled=true
+  listen: "restart pdns-recursor"
+
+- name: Reload UFW
+  community.general.ufw:
+    state: reloaded
+  listen: "reload ufw"

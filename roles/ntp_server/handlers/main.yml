@@ -1,0 +1,8 @@
+- name: Restart ntpd
+  service: name=openntpd state=restarted enabled=yes
+  listen: "restart ntpd"
+
+- name: Reload UFW
+  community.general.ufw:
+    state: reloaded
+  listen: "reload ufw"

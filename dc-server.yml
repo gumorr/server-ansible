@@ -8,12 +8,51 @@
   vars:
     sssd_admin_only: true
     shm_mount_options: ['defaults', 'nodev', 'nosuid', 'noexec']
+    local_domain: local.gummiwelt.net
 
   roles:
     - upgrade_system
     - unattended_upgrades
     - hardening
     - firewall
+    - ntp_server
     - krb5_ldap_sasl
     - kerberize
     - pdns_ldap
+
+  tasks:
+    - name: Add LDAP DNS record
+      community.general.ldap_entry:
+        dn: "dc=ldap,ou=hosts,{{ basedn }}"
+        objectClass:
+          - dNSDomain2
+          - domainRelatedObject
+        attributes:
+          associatedDomain: "ldap.{{ local_domain }}"
+          cnameRecord: "{{ ansible_hostname | lower }}.hosts.{{ local_domain }}"
+        bind_dn: "cn=admin,{{ basedn }}"
+        bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+    - name: Add kerberos DNS record
+      community.general.ldap_entry:
+        dn: "dc=kerberos,ou=hosts,{{ basedn }}"
+        objectClass:
+          - dNSDomain2
+          - domainRelatedObject
+        attributes:
+          associatedDomain: "kerberos.{{ local_domain }}"
+          cnameRecord: "{{ ansible_hostname | lower }}.hosts.{{ local_domain }}"
+        bind_dn: "cn=admin,{{ basedn }}"
+        bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
+
+    - name: Add NTP DNS record
+      community.general.ldap_entry:
+        dn: "dc=ntp,ou=hosts,{{ basedn }}"
+        objectClass:
+          - dNSDomain2
+          - domainRelatedObject
+        attributes:
+          associatedDomain: "ntp.{{ local_domain }}"
+          cnameRecord: "{{ ansible_hostname | lower }}.hosts.{{ local_domain }}"
+        bind_dn: "cn=admin,{{ basedn }}"
+        bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"

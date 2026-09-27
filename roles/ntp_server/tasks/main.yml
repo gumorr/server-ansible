@@ -1,0 +1,20 @@
+- name: Install packages for NTPD
+  ansible.builtin.apt:
+    name:
+      - openntpd
+    state: latest # noqa package-latest
+
+- name: Configure NTPD
+  ansible.builtin.template:
+    src: ntpd.conf.j2
+    dest: /etc/openntpd/ntpd.conf
+    mode: "0644"
+  notify: "restart ntpd"
+
+- name: Open NTP ports in UFW
+  community.general.ufw:
+    rule: allow
+    port: '123'
+    proto: udp
+    comment: "Allow incoming NTP"
+  notify: "reload ufw"

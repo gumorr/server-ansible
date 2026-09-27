@@ -3,7 +3,7 @@
 - name: Check if domain name is available
   ansible.builtin.fail:
     msg: "The machine's domain must not be empty."
-  when: ansible_domain | length == 0
+  when: local_domain | length == 0
 
 - name: Check if slapd is already set up
   ansible.builtin.stat:

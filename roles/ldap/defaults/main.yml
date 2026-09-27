@@ -1,6 +1,6 @@
 ldap_admin_pwd: "{{ lookup('password', '/tmp/ldap_admin.pwd chars=ascii_letters,digits length=32') }}"
 ldap_admin_pwd_file: "/root/ldap-admin.pwd"
-basedn: "{{ 'dc=' + (ansible_domain | replace('^.', '') | replace('.$', '') | replace('.', ',dc=')) }}"
+basedn: "{{ 'dc=' + (local_domain | replace('^.', '') | replace('.$', '') | replace('.', ',dc=')) }}"
 min_id: 20000
 max_id: 29999
 sysuser_gid: 30000

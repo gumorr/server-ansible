@@ -4,7 +4,7 @@
   ansible.builtin.debconf:
     name: slapd
     question: slapd/domain
-    value: "{{ ansible_domain }}"
+    value: "{{ local_domain }}"
     vtype: string
 
 - name: Preseed slapd admin password

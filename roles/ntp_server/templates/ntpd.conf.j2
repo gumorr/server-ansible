@@ -1,0 +1,5 @@
+# Ansible generated
+listen on *
+{% for ntp_host in upstream_ntp_hosts %}
+    servers {{ ntp_host }}
+{% endfor %}

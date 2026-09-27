@@ -1,6 +1,6 @@
 - name: Check that the domain name is available
   ansible.builtin.fail: msg="The machine's domain must not be empty."
-  when: ansible_domain | length == 0
+  when: local_domain | length == 0
 
 - name: Check if PowerDNS is already set up
   ansible.builtin.stat:
@@ -32,15 +32,15 @@
 
 - name: Add SOA record
   community.general.ldap_entry:
-    dn: "dc={{ ansible_domain }},ou=hosts,{{ basedn }}"
+    dn: "dc={{ local_domain }},ou=hosts,{{ basedn }}"
     objectClass:
       - dNSDomain2
       - domainRelatedObject
     attributes:
-      associatedDomain: "{{ ansible_domain }}"
+      associatedDomain: "{{ local_domain }}"
       dNSTTL: 86400
-      sOARecord: "ns1.{{ ansible_domain }} hostmaster.{{ ansible_domain }} {{ now(fmt='%Y%m%d01') }} 7200 900 1209600 3600"
-      nSRecord: "ns1.{{ ansible_domain }}"
+      sOARecord: "ns1.{{ local_domain }} hostmaster.{{ local_domain }} {{ now(fmt='%Y%m%d01') }} 7200 900 1209600 3600"
+      nSRecord: "ns1.{{ local_domain }}"
     bind_dn: "cn=admin,{{ basedn }}"
     bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
 
@@ -53,8 +53,8 @@
     attributes:
       associatedDomain: 168.192.in-addr.arpa
       dNSTTL: 86400
-      sOARecord: "ns1.{{ ansible_domain }} hostmaster.{{ ansible_domain }} {{ now(fmt='%Y%m%d01') }} 7200 900 1209600 3600"
-      nSRecord: "ns1.{{ ansible_domain }}"
+      sOARecord: "ns1.{{ local_domain }} hostmaster.{{ local_domain }} {{ now(fmt='%Y%m%d01') }} 7200 900 1209600 3600"
+      nSRecord: "ns1.{{ local_domain }}"
     bind_dn: "cn=admin,{{ basedn }}"
     bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
 
@@ -71,8 +71,8 @@
     attributes:
       associatedDomain: "{{ ula_reverse_zone }}"
       dNSTTL: 86400
-      sOARecord: "ns1.{{ ansible_domain }} hostmaster.{{ ansible_domain }} {{ now(fmt='%Y%m%d01') }} 7200 900 1209600 3600"
-      nSRecord: "ns1.{{ ansible_domain }}"
+      sOARecord: "ns1.{{ local_domain }} hostmaster.{{ local_domain }} {{ now(fmt='%Y%m%d01') }} 7200 900 1209600 3600"
+      nSRecord: "ns1.{{ local_domain }}"
     bind_dn: "cn=admin,{{ basedn }}"
     bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
 
@@ -83,7 +83,7 @@
       - dNSDomain2
       - domainRelatedObject
     attributes:
-      associatedDomain: "{{ ansible_hostname }}.{{ ansible_domain }}"
+      associatedDomain: "{{ ansible_hostname | lower }}.hosts.{{ local_domain }}"
       aRecord: "{{ ansible_default_ipv4.address }}"
       aAAARecord: "{{ ipv6_ula_address_x509 }}"
     bind_dn: "cn=admin,{{ basedn }}"
@@ -96,8 +96,8 @@
       - dNSDomain2
       - domainRelatedObject
     attributes:
-      associatedDomain: "ns1.{{ ansible_domain }}"
-      cnameRecord: "{{ ansible_hostname }}.{{ ansible_domain }}"
+      associatedDomain: "ns1.{{ local_domain }}"
+      cnameRecord: "{{ ansible_hostname | lower }}.hosts.{{ local_domain }}"
     bind_dn: "cn=admin,{{ basedn }}"
     bind_pw: "{{ ldap_admin_pwd['content'] | b64decode | replace('\n', '') }}"
 

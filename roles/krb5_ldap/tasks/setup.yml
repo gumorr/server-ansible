@@ -156,7 +156,7 @@
       -H ldapi:///
       create -s -subtrees "{{ basedn }}"
       -P "{{ kdc_master_pwd }}"
-      -r "{{ ansible_domain | upper }}"
+      -r "{{ local_domain | upper }}"
   no_log: true
   notify: "restart krb5-kdc"
 
@@ -171,13 +171,13 @@
   ansible.builtin.command: kadmin.local -q "add_policy default"
 
 - name: Create machine principals # noqa no-changed-when
-  ansible.builtin.command: kadmin.local -q 'addprinc -randkey {{ item }}/{{ ansible_hostname }}.{{ ansible_domain }}'
+  ansible.builtin.command: kadmin.local -q 'addprinc -randkey {{ item }}/{{ ansible_hostname | lower }}.hosts.{{ local_domain }}'
   with_items:
     - host
     - ldap
 
 - name: Add principals to the default keytab # noqa no-changed-when
-  ansible.builtin.command: kadmin.local -q 'ktadd {{ item }}/{{ ansible_hostname }}.{{ ansible_domain }}'
+  ansible.builtin.command: kadmin.local -q 'ktadd {{ item }}/{{ ansible_hostname | lower }}.hosts.{{ local_domain }}'
   with_items:
     - host
     - ldap

@@ -1,0 +1,26 @@
+recursor:
+  forward_zones_recurse:
+    - zone: "."
+      forwarders:
+        - 1.1.1.1:853
+        - 1.0.0.1:853
+        - '[2606:4700:4700::1111]:853'
+        - '[2606:4700:4700::1001]:853'
+
+  forward_zones:
+    - zone: "{{ local_domain }}"
+      forwarders:
+        - 127.0.0.1:5353
+        - '[::1]:5353'
+
+incoming:
+  listen:
+    - 0.0.0.0:53
+    - '[::]:53'
+
+outgoing:
+  dot_to_port_853: true
+
+  source_address:
+    - 0.0.0.0
+    - '::'

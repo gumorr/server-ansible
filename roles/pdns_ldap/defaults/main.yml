@@ -1,1 +1,1 @@
-basedn: "{{ 'dc=' + ( ansible_domain | replace('^.','') | replace('.$','') | replace('.',',dc=')) }}"
+basedn: "{{ 'dc=' + ( local_domain | replace('^.','') | replace('.$','') | replace('.',',dc=')) }}"

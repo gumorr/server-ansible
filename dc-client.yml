@@ -8,6 +8,7 @@
   vars:
     sssd_admin_only: true
     shm_mount_options: ['defaults', 'nodev', 'nosuid', 'noexec']
+    local_domain: local.gummiwelt.net
 
   vars_prompt:
     - name: "kadmin_pwd"
@@ -19,5 +20,5 @@
     - unattended_upgrades
     - hardening
     - firewall
-    - timesyncd
+    - ntp_client
     - kerberize

@@ -3,6 +3,7 @@
     name:
       - pdns-server
       - pdns-backend-ldap
+      - pdns-recursor
     state: latest # noqa package-latest
 
 - name: Convert pdns-domaininfo schema to ldif
@@ -33,9 +34,21 @@
         - associatedDomain pres,eq,sub
         - aAAARecord pres,eq
         - aRecord pres,eq
+  notify: "restart slapd"
 
 - name: Configure PowerDNS
   ansible.builtin.template:
     src: pdns.conf.j2
     dest: /etc/powerdns/pdns.conf
     mode: "0644"
+  notify: "restart pdns"
+
+- name: Configure PowerDNS Recursor
+  ansible.builtin.template:
+    src: recursor.conf.j2
+    dest: /etc/powerdns/recursor.conf
+    mode: "0644"
+  notify: "restart pdns-recursor"
+
+- name: Flush handlers to get the daemons running
+  ansible.builtin.meta: flush_handlers
